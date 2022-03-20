@@ -1,19 +1,20 @@
 const User = require("../models/User")
-const { registerSchema } = require("../validator/registerV")
-const { queryErrorRelatedResponse, createResponse ,successResponce} = require("../utils/sendResponse")
+const { userValidation } = require("../validator/registerV")
+const { queryErrorRelatedResponse, createResponse, successResponce } = require("../utils/sendResponse")
 const bcrypt = require("bcrypt")
-const jwt=require("jsonwebtoken")
+const jwt = require("jsonwebtoken")
 
 const signupCtrl = async (req, res, next) => {
     try {
         const { username, email, mobile, password } = req.body;
-        const { error } = registerSchema.validate(req.body);
+        const { error } = userValidation(req.body);
+        // Check for valition
         if (error) {
-            return res.status(422).json(error.details[0].message);
+            return queryErrorRelatedResponse(req, res, 422, `${error.details[0].message.replace(/"/g, '')}.`)
         }
         const checkemail = await User.findOne({ email: email });
         if (checkemail) {
-            return res.status(401).json({ isSuccess: false, status: 400, message: "Email already exists" });
+            return res.status(422).json({ isSuccess: false, status: 422, message: "Email already exists" });
         } else {
             const hashed = await bcrypt.hash(password, 8);
             const user = new User({
@@ -34,7 +35,7 @@ const signinCtrl = async (req, res, next) => {
     try {
         let login = await User.findOne({ email: req.body.email });
         if (!login) {
-            if(!login) return queryErrorRelatedResponse(req,res,401,"Invalid details!");
+            if (!login) return queryErrorRelatedResponse(req, res, 422, "Invalid details!");
         } else {
             let isMatch = await bcrypt.compare(req.body.password, login.password);
             const token = jwt.sign(
@@ -42,9 +43,9 @@ const signinCtrl = async (req, res, next) => {
                 process.env.TOKEN_SERECTKEY
             );
             if (isMatch) {
-                successResponce(req,res,token)
+                successResponce(req, res, token)
             } else {
-                return queryErrorRelatedResponse(req,res,401,"Invalid details!");
+                return queryErrorRelatedResponse(req, res, 422, "Invalid details!");
             }
         }
     } catch (error) {

@@ -1,62 +1,142 @@
-import React from "react";
-import { Grid } from "@material-ui/core";
-import { makeStyles } from "@material-ui/styles";
+import React, { useEffect, useState } from "react";
+import { Grid, Button } from "@material-ui/core";
 import MUIDataTable from "mui-datatables";
-
+import { allbook, deletebook } from "../../Apiservices"
 // components
 import PageTitle from "../../components/PageTitle";
-import Widget from "../../components/Widget";
-import Table from "../dashboard/components/Table/Table";
+import * as Icons from "@material-ui/icons";
+import swal from 'sweetalert';
+import { toast } from "react-toastify";
 
-// data
-import mock from "../dashboard/mock";
 
-const datatableData = [
-  ["Joe James", "Example Inc.", "Yonkers", "NY"],
-  ["John Walsh", "Example Inc.", "Hartford", "CT"],
-  ["Bob Herm", "Example Inc.", "Tampa", "FL"],
-  ["James Houston", "Example Inc.", "Dallas", "TX"],
-  ["Prabhakar Linwood", "Example Inc.", "Hartford", "CT"],
-  ["Kaui Ignace", "Example Inc.", "Yonkers", "NY"],
-  ["Esperanza Susanne", "Example Inc.", "Hartford", "CT"],
-  ["Christian Birgitte", "Example Inc.", "Tampa", "FL"],
-  ["Meral Elias", "Example Inc.", "Hartford", "CT"],
-  ["Deep Pau", "Example Inc.", "Yonkers", "NY"],
-  ["Sebastiana Hani", "Example Inc.", "Dallas", "TX"],
-  ["Marciano Oihana", "Example Inc.", "Yonkers", "NY"],
-  ["Brigid Ankur", "Example Inc.", "Dallas", "TX"],
-  ["Anna Siranush", "Example Inc.", "Yonkers", "NY"],
-  ["Avram Sylva", "Example Inc.", "Hartford", "CT"],
-  ["Serafima Babatunde", "Example Inc.", "Tampa", "FL"],
-  ["Gaston Festus", "Example Inc.", "Tampa", "FL"],
-];
+export default function Tables(props) {
+  const [datatableData, setdatatableData] = useState([])
 
-const useStyles = makeStyles(theme => ({
-  tableOverflow: {
-    overflow: 'auto'
+  const list = () => {
+    allbook()
+      .then((response) => {
+        setdatatableData(response.data.info)
+      })
+      .catch((err) => {
+        console.log(localStorage.getItem("token"));
+        console.log(err.response);
+      })
   }
-}))
 
-export default function Tables() {
-  const classes = useStyles();
+  useEffect(() => {
+    list();
+  }, [])
+
+  const options = {
+    filter: true,
+    filterType: "dropdown",
+    print: false,
+    viewColumns: true,
+    selectableRows: 'none',
+    onRowClick: (rowData) => {
+      console.log("RowClicked->", rowData);
+    },
+    responsive: "stacked",
+    fixedHeaderOptions: {
+      xAxis: false,
+      yAxis: true,
+    },
+  };
+
+  const columns = [
+    {
+      "name": "name",
+      label: "name"
+    },
+    {
+      "name": "author",
+      label: "author"
+    },
+    {
+      "name": "title",
+      label: "title"
+    },
+    {
+      "name": "rating",
+      label: "rating"
+    },
+    {
+      "name": "_id",
+      label: "Action",
+      options: {
+        customBodyRender: (value, tableMeta, updateValue) => {
+          return (
+            <div>
+              <Icons.Edit
+                onClick={() => {
+                  const editdata = datatableData.find(
+                    (data) => data._id === value,
+                  )
+                  props.history.push({
+                    pathname: "/app/book/add",
+                    state: {
+                      editdata: editdata,
+                    }
+                  })
+                }}
+              />{" "}
+              <Icons.Delete
+                onClick={async () => {
+                  const confirm = await swal({
+                    title: "Are you sure?",
+                    text: "Are you sure that you want to delete this page?",
+                    icon: "warning",
+                    dangerMode: true,
+                  })
+                  if (confirm) {
+                    deletebook(value)
+                      .then(() => {
+                        toast.success("Delete successfully", {
+                          key: value,
+                        })
+                        list();
+                      })
+                      .catch(() => {
+                        toast.error("something is wrong", {
+                          key: value
+                        })
+                      })
+                  }
+                }}
+              />
+            </div>
+          )
+        }
+      }
+
+    }
+  ]
   return (
     <>
-      <PageTitle title="Tables" />
+      <PageTitle title="Tables"
+        button={
+          <>
+            <Button
+              variant="contained"
+              size="medium"
+              color="secondary"
+              onClick={() => {
+                props.history.push("/app/book/add");
+              }}
+            >
+              Add Book
+            </Button>
+          </>
+        }
+      />
       <Grid container spacing={4}>
         <Grid item xs={12}>
           <MUIDataTable
-            title="Employee List"
+            title="Book List"
             data={datatableData}
-            columns={["Name", "Company", "City", "State"]}
-            options={{
-              filterType: "checkbox",
-            }}
+            columns={columns}
+            options={options}
           />
-        </Grid>
-        <Grid item xs={12}>
-          <Widget title="Material-UI Table" upperTitle noBodyPadding bodyClass={classes.tableOverflow}>
-            <Table data={mock.table} />
-          </Widget>
         </Grid>
       </Grid>
     </>

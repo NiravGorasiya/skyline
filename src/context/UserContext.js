@@ -1,4 +1,5 @@
 import React from "react";
+import { userlogin } from "../Apiservices"
 
 var UserStateContext = React.createContext();
 var UserDispatchContext = React.createContext();
@@ -17,7 +18,7 @@ function userReducer(state, action) {
 
 function UserProvider({ children }) {
   var [state, dispatch] = React.useReducer(userReducer, {
-    isAuthenticated: !!localStorage.getItem("id_token"),
+    isAuthenticated: !!localStorage.getItem("token"),
   });
 
   return (
@@ -50,27 +51,26 @@ export { UserProvider, useUserState, useUserDispatch, loginUser, signOut };
 // ###########################################################
 
 function loginUser(dispatch, login, password, history, setIsLoading, setError) {
-  setError(false);
-  setIsLoading(true);
-
-  if (!!login && !!password) {
-    setTimeout(() => {
-      localStorage.setItem('id_token', 1)
-      setError(null)
-      setIsLoading(false)
-      dispatch({ type: 'LOGIN_SUCCESS' })
-
-      history.push('/app/dashboard')
-    }, 2000);
-  } else {
-    dispatch({ type: "LOGIN_FAILURE" });
-    setError(true);
-    setIsLoading(false);
-  }
+  userlogin({ email: login, password: password })
+    .then((response) => {
+      if (response.data.status === 200) {
+        localStorage.setItem('token',response.data.info)
+        setError("")
+        setIsLoading(false)
+        dispatch({ type: 'LOGIN_SUCCESS' })
+        history.push('/app/dashboard')
+      }
+    })
+    .catch((err) => {
+      if (err.response.status === 422 || err.response.status === 401) {
+        setIsLoading(false)
+        setError(err.response.data.message)
+      }
+    })
 }
 
 function signOut(dispatch, history) {
-  localStorage.removeItem("id_token");
+  localStorage.removeItem("token");
   dispatch({ type: "SIGN_OUT_SUCCESS" });
   history.push("/login");
 }

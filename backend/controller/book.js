@@ -1,11 +1,16 @@
 const Book = require("../models/Book")
-const { bookSchema } = require("../validator/bookV")
+const { bookValidation } = require("../validator/bookV")
 const { createResponse, successResponce,deleteResponce,queryErrorRelatedResponse } = require("../utils/sendResponse")
 const mongoose = require("mongoose")
 
 const bookaddCtrl = async (req, res, next) => {
     try {
         const { name, author, title, rating } = req.body;
+        const { error } = bookValidation(req.body);
+        // Check for valition
+        if (error) {
+            return queryErrorRelatedResponse(req, res, 422, `${error.details[0].message.replace(/"/g, '')}.`)
+        }
         const book = new Book({
             name,
             author,
